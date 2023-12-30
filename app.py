@@ -7,9 +7,12 @@ import queue
 import ask_gpt
 import threading
 
+import config
+
 q = queue.Queue()
 
-model = vosk.Model('') # твой путь до модели воск
+# твой путь к модели воск
+model = vosk.Model(config.PATH_MODEL)
 # model = vosk.Model('E:\\Downloads\\vosk-model-ru-0.42\\vosk-model-ru-0.42')
 device = sd.default.device
 samplerate = int(sd.query_devices(device[0], 'input')['default_samplerate'])
@@ -24,14 +27,20 @@ def start_assistant():
                            channels=1, callback=callback):
         rec = vosk.KaldiRecognizer(model, samplerate)
         while True:
-            data = q.get()
-            if rec.AcceptWaveform(data):
-                data = json.loads(rec.Result())['text']
-                print(data)
-                if len(data) > 0:
-                    ask_gpt.ask_gpt(prompt=data)
-            else:
-                print(rec.PartialResult())
+            try:
+                data = q.get()
+                if rec.AcceptWaveform(data):
+                    data = json.loads(rec.Result())['text']
+                    print(data)
+                    if data:
+                        ask_gpt.ask_gpt(prompt=data)
+                else:
+                    (rec.PartialResult())
+            except KeyboardInterrupt:
+                print("Выход")
+                break
+            except Exception as e:
+                print(f"error:{e}")
 
 
 def main():
